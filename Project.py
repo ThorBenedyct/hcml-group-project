@@ -27,19 +27,12 @@ y_train = np.load("y_train.npy") # 6k male (m), 2k female (f)
 X_test = np.load("X_test.npy")
 y_test = np.load("y_test.npy") # 2k male (m), 2k female (f)
 
-idx_m = y_test=="m"
-idx_f = y_test=="f"
-
-# Balance Training data
-# male_indices_downsampled = np.random.choice(idx_m, size=len(idx_f), replace=False)
-# # Combine indices
-# balanced_indices = np.concatenate([male_indices_downsampled, idx_f])
-# # np.random.shuffle(balanced_indices)
-# X_train = X_train[balanced_indices]
-# y_train = y_train[balanced_indices]
+X_dev = X_train[:500]
+y_dev = y_train[:500]
 
 idx_m = y_test=="m"
 idx_f = y_test=="f"
+
 
 ### feature normalization
 scaler = StandardScaler()
@@ -49,7 +42,8 @@ X_test = scaler.transform(X_test)
 
 
 ### define model for gender classification
-model = svm.SVC(class_weight="balanced")
+# model = LogisticRegression(max_iter=1000, class_weight="balanced")
+model = svm.SVC(class_weight="balanced", kernel="poly")
 
 ### training
 model.fit(X_train, y_train)
@@ -62,7 +56,6 @@ print("Acc: {}".format(acc))
  
 # accuracy per class
 y_pred = model.predict(X_test)
-
 
 acc_m = model.score(X_test[idx_m], y_test[idx_m])
 acc_f = model.score(X_test[idx_f], y_test[idx_f])
