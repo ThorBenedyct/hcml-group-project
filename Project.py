@@ -43,7 +43,7 @@ X_test = scaler.transform(X_test)
 
 ### define model for gender classification
 # model = LogisticRegression(max_iter=1000, class_weight="balanced")
-model = svm.SVC(class_weight="balanced", kernel="poly")
+model = svm.SVC(class_weight="balanced")
 
 ### training
 model.fit(X_train, y_train)
