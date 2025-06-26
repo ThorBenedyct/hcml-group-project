@@ -1,63 +1,56 @@
 import numpy as np
 from sklearn.preprocessing import StandardScaler
-from sklearn.linear_model import LogisticRegression
-from sklearn import svm
+from sklearn.decomposition import PCA
+from sklearn.svm import SVC
+from sklearn.metrics import accuracy_score
+import joblib
 
-"""
-Task: Develop a methodology that is based on the train data (face embeddings /
-templates) and achieves the best performance (accuracy for gender estimation)
-on the test data.
-
-You are allow to modify the training proccess including data augmentation, 
-the use of different traditional and deep learning models, regularization
-techniques and many more.
-
-The training data is highly unbalanced. You will see that just training a 
-simple classifier on this data result in a weak and unfair performance.
-Your goal is to increase the performance as much as possible, i.e. you
-need to develop a fair and accurate methodology.
-
-Keep in mind: Hyperparameter optimization must be done by splitting the 
-training set into an additional evaluation set.
-"""
-
-### load data
+#  Loading Data 
 X_train = np.load("X_train.npy")
-y_train = np.load("y_train.npy") # 6k male (m), 2k female (f)
+y_train = np.load("y_train.npy")
 X_test = np.load("X_test.npy")
-y_test = np.load("y_test.npy") # 2k male (m), 2k female (f)
+y_test = np.load("y_test.npy")
 
-X_dev = X_train[:500]
-y_dev = y_train[:500]
-
-idx_m = y_test=="m"
-idx_f = y_test=="f"
-
-
-### feature normalization
+#  Feature normalization 
 scaler = StandardScaler()
-# scaler must be fitted on training data only
-X_train = scaler.fit_transform(X_train)
-X_test = scaler.transform(X_test)
+X_train_scaled = scaler.fit_transform(X_train)
+X_test_scaled = scaler.transform(X_test)
+print("Shape before reduction:")
+print("X_train_pca:", X_train.shape)
+print("X_test_pca:", X_test.shape)
 
+#  PCA: Use fixed number of components to cut excessive dimensions
+#  Reducing from 512D embeddings to 75D to remove noise and simplify the model
+pca = PCA(n_components=75) 
+X_train_pca = pca.fit_transform(X_train_scaled)
+X_test_pca = pca.transform(X_test_scaled)
 
-### define model for gender classification
-# model = LogisticRegression(max_iter=1000, class_weight="balanced")
-model = svm.SVC(class_weight="balanced")
+#  Define SVM classifier 
+svm = SVC(kernel='rbf', class_weight='balanced', gamma='scale')
 
-### training
-model.fit(X_train, y_train)
+#  Training SVM model 
+svm.fit(X_train_pca, y_train)
 
-### evaluation
+#  Saveing the Model 
+joblib.dump(svm, "svm_pca_model.pkl")
 
-# accuracy (the test data is balanced)
-acc = model.score(X_test, y_test)
-print("Acc: {}".format(acc))
- 
-# accuracy per class
-y_pred = model.predict(X_test)
+#  Evaluation 
+y_pred = svm.predict(X_test_pca)
 
-acc_m = model.score(X_test[idx_m], y_test[idx_m])
-acc_f = model.score(X_test[idx_f], y_test[idx_f])
-print("Acc M: {}".format(acc_m))
-print("Acc F: {}".format(acc_f))
+#  Overall accuracy 
+acc = accuracy_score(y_test, y_pred)
+
+# Accuracy per class
+acc_m = accuracy_score(y_test[y_test == 'm'], y_pred[y_test == 'm'])
+acc_f = accuracy_score(y_test[y_test == 'f'], y_pred[y_test == 'f'])
+
+print(f"Overall Accuracy: {acc:.4f}")
+print(f"Male Accuracy:    {acc_m:.4f}")
+print(f"Female Accuracy:  {acc_f:.4f}")
+
+#  Loading the saved model 
+loaded_model = joblib.load("svm_pca_model.pkl")
+
+# Accuracy from loaded model
+acc_loaded = accuracy_score(y_test, loaded_model.predict(X_test_pca))
+print(f"Overall Accuracy (Loaded Model): {acc_loaded:.4f}")
