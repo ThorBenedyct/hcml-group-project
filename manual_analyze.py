@@ -1,3 +1,5 @@
+import statistics
+
 import matplotlib
 import numpy as np
 from sklearn.preprocessing import StandardScaler
@@ -6,6 +8,7 @@ from sklearn.manifold import TSNE
 from matplotlib import pyplot as plt
 
 matplotlib.use('TkAgg')
+
 
 ### load data
 X_train = np.load("X_train.npy") 

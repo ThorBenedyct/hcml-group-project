@@ -38,22 +38,12 @@ y_test = np.load("y_test.npy")  # 2k male (m), 2k female (f)
 
 ### Further split training data into train and dev data
 # sum_females = 0
-# while sum_females < 250:
-#     X_train, y_train = shuffle(X_train, y_train)
-#
-#     X_dev = X_train[:1000]
-#     y_dev = y_train[:1000]
-#
-#     idx_m = y_dev == "m"
-#     idx_f = y_dev == "f"
-#     sum_males = idx_m.sum()
-#     sum_females = idx_f.sum()
 
-X_dev = X_train[5750:6250]
-y_dev = y_train[5750:6250]
+X_dev = X_train[5700:6300]
+y_dev = y_train[5700:6300]
 
-X_train = np.concatenate((X_train[:5750], X_train[6250:]), axis=0)
-y_train = np.concatenate((y_train[:5750], y_train[6250:]), axis=0)
+X_train = np.concatenate((X_train[:5700], X_train[6300:]), axis=0)
+y_train = np.concatenate((y_train[:5700], y_train[6300:]), axis=0)
 
 idx_m = y_dev == "m"
 idx_f = y_dev == "f"
@@ -67,12 +57,9 @@ print(f"Split development data with {sum_males} males and {sum_females} females"
 scaler = StandardScaler()
 # scaler must be fitted on training data only
 X_train = scaler.fit_transform(X_train)
-X_dev = scaler.fit_transform(X_dev)
+X_dev = scaler.transform(X_dev)
 X_test = scaler.transform(X_test)
 
-
-highest_accuracy = 0
-best_model = None
 
 results = []
 
@@ -87,21 +74,30 @@ for hyper_parameters in hyper_parameter_sets:
     print("Acc: {}".format(acc))
 
     results.append(Result(hyper_parameters, acc, acc_m, acc_f))
-    if acc > highest_accuracy:
-        highest_accuracy = acc
-        best_model = hyper_parameters
 
 results = sorted(results)
 for result in results:
     print(result)
 
-print(f"\nBest hyper-parameters: {best_model}")
-print(f"with accuracy: {highest_accuracy}")
-model = set_model(best_model)
+best_model = results[0]
+print(f"\nBest model: {best_model}")
+model = set_model(best_model.params)
+#model = svm.SVC(class_weight='balanced')
 
+
+### load data
 X_train = np.load("X_train.npy")
-y_train = np.load("y_train.npy")  # 6k male (m), 2k female (f)
+y_train = np.load("y_train.npy") # 6k male (m), 2k female (f)
+X_test = np.load("X_test.npy")
+y_test = np.load("y_test.npy")  # 2k male (m), 2k female (f)
+
+idx_m = y_test=="m"
+idx_f = y_test=="f"
+
+scaler = StandardScaler()
 X_train = scaler.fit_transform(X_train)
+X_test = scaler.transform(X_test)
+
 
 model.fit(X_train, y_train)
 
