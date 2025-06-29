@@ -1,4 +1,7 @@
+import csv
+
 import numpy as np
+from sklearn.decomposition import PCA
 from sklearn.preprocessing import StandardScaler
 from sklearn.linear_model import LogisticRegression
 from sklearn import svm
@@ -37,8 +40,6 @@ X_test = np.load("X_test.npy")
 y_test = np.load("y_test.npy")  # 2k male (m), 2k female (f)
 
 ### Further split training data into train and dev data
-# sum_females = 0
-
 X_dev = X_train[5700:6300]
 y_dev = y_train[5700:6300]
 
@@ -56,9 +57,19 @@ print(f"Split development data with {sum_males} males and {sum_females} females"
 ### feature normalization
 scaler = StandardScaler()
 # scaler must be fitted on training data only
-X_train = scaler.fit_transform(X_train)
-X_dev = scaler.transform(X_dev)
-X_test = scaler.transform(X_test)
+X_train_scaler = X_train = scaler.fit_transform(X_train)
+X_dev_scaler = X_dev = scaler.transform(X_dev)
+X_test_scaler = X_test = scaler.transform(X_test)
+
+# pca = PCA(n_components=75)
+# X_train_pca = pca.fit_transform(X_train)
+# X_dev_pca = pca.transform(X_dev)
+# X_test_pca = pca.transform(X_test)
+#
+# pca = PCA(n_components=75)
+# X_train_scaler_pca = pca.fit_transform(X_train_scaler)
+# X_dev_scaler_pca = pca.transform(X_dev_scaler)
+# X_test_scaler_pca = pca.transform(X_test_scaler)
 
 
 results = []
@@ -67,17 +78,39 @@ for hyper_parameters in hyper_parameter_sets:
     model = set_model(hyper_parameters)
 
     ### training
-    model.fit(X_train, y_train)
+    if hyper_parameters["normalization"] == "scaler":
+        _X_train = X_train_scaler
+        _X_dev = X_dev_scaler
+    # elif hyper_parameters["normalization"] == "pca":
+    #     _X_train = X_train_pca
+    #     _X_dev = X_dev_pca
+    # elif hyper_parameters["normalization"] == "scalar+pca":
+    #     _X_train = X_train_scaler_pca
+    #     _X_dev = X_dev_scaler_pca
+    else:
+        _X_train = X_train
+        _X_dev = X_dev
+
+    model.fit(_X_train, y_train)
 
     print(f"Results for hyper-parameter {hyper_parameters}")
-    acc, acc_m, acc_f = calc_accuracy(X_dev, y_dev, model)
-    print("Acc: {}".format(acc))
+    acc, acc_m, acc_f = calc_accuracy(_X_dev, y_dev, model)
+    print(f"Acc: {acc:.4f}")
 
     results.append(Result(hyper_parameters, acc, acc_m, acc_f))
 
 results = sorted(results)
+with open('derived data/data.csv', mode="w", newline="") as file:
+    writer = csv.writer(file, delimiter=';')
+    writer.writerow(["Model", "weight", "kernel", "gamma", "normalization", "Acc", "M_Acc", "F_Acc"])
+
 for result in results:
     print(result)
+    data = list(result.params.values()) + [result.total_acc, result.m_acc, result.f_acc]
+    with open('derived data/data.csv', mode="a", newline="") as file:
+        formatted_row = [f"{x:.10f}" if isinstance(x, float) else x for x in data]
+        writer = csv.writer(file, delimiter=';')
+        writer.writerow(formatted_row)
 
 best_model = results[0]
 print(f"\nBest model: {best_model}")
@@ -94,10 +127,29 @@ y_test = np.load("y_test.npy")  # 2k male (m), 2k female (f)
 idx_m = y_test=="m"
 idx_f = y_test=="f"
 
+### feature normalization
 scaler = StandardScaler()
-X_train = scaler.fit_transform(X_train)
-X_test = scaler.transform(X_test)
+# scaler must be fitted on training data only
+X_train_scaler = scaler.fit_transform(X_train)
+X_test_scaler = scaler.transform(X_test)
 
+pca = PCA(n_components=75)
+X_train_pca = pca.fit_transform(X_train)
+X_test_pca = pca.transform(X_test)
+
+pca = PCA(n_components=75)
+X_train_scaler_pca = pca.fit_transform(X_train_scaler)
+X_test_scaler_pca = pca.transform(X_test_scaler)
+
+if best_model.params["normalization"] == "scaler":
+    X_train = X_train_scaler
+    X_test = X_test_scaler
+elif best_model.params["normalization"] == "pca":
+    X_train = X_train_pca
+    X_test = X_test_pca
+elif best_model.params["normalization"] == "scalar+pca":
+    X_train = X_train_scaler_pca
+    X_test = X_test_scaler_pca
 
 model.fit(X_train, y_train)
 

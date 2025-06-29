@@ -2,6 +2,7 @@ import numpy as np
 from sklearn.preprocessing import StandardScaler
 from sklearn.linear_model import LogisticRegression
 from sklearn import svm
+from colorama import Fore, Back, Style
 
 
 ### load data
@@ -22,9 +23,11 @@ X_test = scaler.transform(X_test)
 
 
 ### define model for gender classification
-# model = LogisticRegression(max_iter=1000, class_weight="balanced")
-model = svm.SVC(class_weight='balanced', gamma=1/600)
-
+model = svm.SVC(
+    class_weight='balanced',
+    kernel="poly",
+    gamma=0.001
+)
 ### training
 model.fit(X_train, y_train)
 
@@ -39,5 +42,5 @@ print("Acc: {}".format(acc))
 
 acc_m = model.score(X_test[idx_m], y_test[idx_m])
 acc_f = model.score(X_test[idx_f], y_test[idx_f])
-print("Acc M: {}".format(acc_m))
-print("Acc F: {}".format(acc_f))
+print(f"{Fore.BLUE}Acc M: {acc_m}")
+print(f"{Fore.RED}Acc F: {acc_f}")
